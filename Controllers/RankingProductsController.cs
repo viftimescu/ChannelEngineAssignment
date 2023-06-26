@@ -54,8 +54,10 @@ namespace ChannelEngineAssignment.Controllers
                 products[0].MerchantProductNo, products[0].StockLocation.Id, 25, dataController);
             await modifyStockTaskSolver.SolveTask();
 
+            List<RankingProduct> rankingProducts = await dataController.GetRankingProducts();
+
             return _context.RankingProduct != null ?
-                        View(modifyStockTaskSolver.messageData) :
+                        View(rankingProducts) :
                         Problem("Entity set 'ApplicationDbContext.RankingProduct'  is null.");
         }
 
