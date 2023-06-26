@@ -7,16 +7,26 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ChannelEngineAssignment.Data;
 using ChannelEngineConsoleApp.Data;
+using ChannelEngineConsoleApp.Controllers;
+using ChannelEngineConsoleApp;
+using Newtonsoft.Json;
 
 namespace ChannelEngineAssignment.Controllers
 {
     public class RankingProductsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private static string API_PATH = "https://api-dev.channelengine.net/api/";
+        private static string API_KEY = "541b989ef78ccb1bad630ea5b85c6ebff9ca3322";
+        private static DataController dataController;
+        private RankingTaskSolver rankingTaskSolver;
+        private ModifyStockTaskSolver modifyStockTaskSolver;
 
         public RankingProductsController(ApplicationDbContext context)
         {
             _context = context;
+            dataController = new DataController(API_PATH, API_KEY);
+            rankingTaskSolver = new RankingTaskSolver(dataController);
         }
 
         // GET: RankingProducts
@@ -25,6 +35,28 @@ namespace ChannelEngineAssignment.Controllers
               return _context.RankingProduct != null ? 
                           View(await _context.RankingProduct.ToListAsync()) :
                           Problem("Entity set 'ApplicationDbContext.RankingProduct'  is null.");
+        }
+
+        // Prints the result of the top-5 ranking on a web page.
+        public async Task<IActionResult> GetRanking() {
+            await rankingTaskSolver.SolveTask();
+
+            return _context.RankingProduct != null ?
+                        View(rankingTaskSolver.Top5Products) :
+                        Problem("Entity set 'ApplicationDbContext.RankingProduct'  is null.");
+        }
+
+        // Prints the return message of the modify stock PUT request on a web page.
+        public async Task<IActionResult> ShowStockOutput() {
+            List<Line> products = await dataController.GetInProgressProducts();
+
+            modifyStockTaskSolver = new ModifyStockTaskSolver(
+                products[0].MerchantProductNo, products[0].StockLocation.Id, 25, dataController);
+            await modifyStockTaskSolver.SolveTask();
+
+            return _context.RankingProduct != null ?
+                        View(modifyStockTaskSolver.messageData) :
+                        Problem("Entity set 'ApplicationDbContext.RankingProduct'  is null.");
         }
 
         // GET: RankingProducts/Details/5
